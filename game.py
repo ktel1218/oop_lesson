@@ -3,7 +3,7 @@ import pyglet
 from pyglet.window import key
 from core import GameElement
 import sys
-import random, time
+import random
 
 #### DO NOT TOUCH ####
 GAME_BOARD = None
@@ -13,20 +13,18 @@ PLAYER = None
 DIALOGUE = None
 SAUSAGE_TWINS = None
 SAUSAGE_TIMER = 0
+CHASE = False
+SAUSAGE_CONVO = False
 
 ######################
 
-GAME_WIDTH = 10
+GAME_WIDTH = 12
 GAME_HEIGHT = 10
 
 #### Put class definitions here ####
 class Rock(GameElement):
     IMAGE = "Rock"
     SOLID = True
-
-class Sparkle(GameElement):
-    IMAGE = "Sparkle"
-    SOLID = False
 
 class Poo(GameElement):
     IMAGE = "Poo"
@@ -37,6 +35,10 @@ class Poo(GameElement):
         GAME_BOARD.draw_msg("Um. You just touched poop! You now have a %r in your inventory. Cool... I guess..." % self)
     def __repr__(self):
         return self.IMAGE
+
+class Tree(GameElement):
+    IMAGE = "ShortTree"
+    SOLID = True
 
 class Character(GameElement):
     IMAGE = "Princess"
@@ -58,6 +60,7 @@ class Character(GameElement):
 class Char_bot(Character):
     IMAGE = "Horns"
     SOLID = True
+    conversation_count = 0
 
     def interact(self, player):
         global DIALOGUE
@@ -67,22 +70,52 @@ class Char_bot(Character):
 
 class Ally(Char_bot):
     def conversation(self, player, choice):
-        global DIALOGUE
-        GAME_BOARD.draw_msg(unicode("%s: What do you want?" % self.IMAGE + unichr(10) + "A. A sandwich" + unichr(10) + "B. A friend" )) 
-        if choice == 'a':
-            GAME_BOARD.draw_msg("Gosh, %s, so grabby! I'm not giving you anything!" % player.IMAGE)
-            DIALOGUE = None
-            return
+        bread1 = Food()
+        bread1.IMAGE = "Bread"
+        GAME_BOARD.register(bread1)
 
-        elif choice == 'b':
-            GAME_BOARD.draw_msg(unicode("Awwwwww, %s, I'll be your friend! Want a bread?" % player.IMAGE))
-            bread1 = Food()
-            bread1.IMAGE = "Bread"
-            GAME_BOARD.register(bread1)
-            GAME_BOARD.set_el(self.x-1, self.y+1, bread1)
-            DIALOGUE = None
-            return
+        bread2 = Food()
+        bread2.IMAGE = "Bread"
+        GAME_BOARD.register(bread2)
+
+        cheese = Food()
+        cheese.IMAGE = "Cheese"
+        GAME_BOARD.register(cheese)
+        global SAUSAGE_CONVO
+        global DIALOGUE
+        if self.conversation_count == 0:
+            GAME_BOARD.draw_msg(unicode("%s: Hello %s! You look really hungry. Can I help you with anything?" % (self.IMAGE, player.IMAGE) + unichr(10) + "A. I just want a sandwich" + unichr(10) + "B. I just want a friend" )) 
+            if choice == 'a':
+                GAME_BOARD.draw_msg("Gosh, %s, so grabby! I'm not giving you anything!" % player.IMAGE)
+                DIALOGUE = None
+                return
+
+            elif choice == 'b':
+                GAME_BOARD.draw_msg(unicode("Awwwwww, %s, I'll be your friend! Here, have a sandwich!" % player.IMAGE + unichr(10) + "Woops! I spilled. Bring me all the fixings and I'll make you that sandwich. I think there's some lettuce in the garden." ))
+                
+                GAME_BOARD.set_el(self.x-1, self.y+1, bread1)
+                
+                GAME_BOARD.set_el(self.x-3, self.y+4, bread2)
+                
+                GAME_BOARD.set_el(2, 2, cheese)
+
+                self.conversation_count = 1
+                DIALOGUE = None
+                SAUSAGE_CONVO = True
+                return
+        elif self.conversation_count == 1:
+            if (bread1 in PLAYER.inventory): #and (cheese.IMAGE in PLAYER.inventory) and (bread2.IMAGE in PLAYER.inventory): #and Ham not in PLAYER.inventory and Lettuce not in PLAYER.inventory:
+                GAME_BOARD.draw_msg("Hey! You have bread and cheese... where's the lettuce and ham? Can't be a sandwich without them!")
+                DIALOGUE = None
+                return
+            else:
+                GAME_BOARD.draw_msg("Where's your sandwich stuff?")
+                print PLAYER.inventory
+                DIALOGUE = None
+                return
+
 class Adversary(Char_bot):
+    conversation_count = 0
     def movement(self):
         i = random.randint(1, 4)
 
@@ -108,8 +141,25 @@ class Adversary(Char_bot):
 
     def conversation(self, player, choice):
         global DIALOGUE
-        DIALOGUE = None
+        global CHASE
+        global SAUSAGE_CONVO
+        if SAUSAGE_CONVO == False:
+            GAME_BOARD.draw_msg("\"grrrrrrr...GRRRRRRRRRRRRR\"")
+            DIALOGUE = None
+            return
 
+        else:
+            GAME_BOARD.draw_msg(unicode("\"Hey princess. You're looking hungry. Want this tasty lettuce? Can't have it. How about a piece of me instead?\""  + unichr(10) + "A. *glare and stomp off*"  + unichr(10) + "B. *throw poo*"))
+            if choice == 'a':
+                DIALOGUE = None
+                return
+            if choice == 'b':
+                GAME_BOARD.draw_msg("You have provoked the Sausage Twins! Run!")
+                GAME_BOARD.del_el(self.x, self.y)
+                GAME_BOARD.set_el(3,4, self)
+                CHASE = True
+                DIALOGUE = None
+                return
 class Gem(GameElement):
     IMAGE = "BlueGem"
     SOLID = False
@@ -135,9 +185,10 @@ class Food(GameElement):
 def initialize():
     """Put game initialization code here"""
     rock_positions = [
-        (2,1),
         (1,2),
-        (3,2),
+        (2,7),
+        (2,2),
+        (8,8),
     ]
     rocks = []
 
@@ -147,13 +198,24 @@ def initialize():
         GAME_BOARD.set_el(pos[0], pos[1], rock)
         rocks.append(rock)
 
+    tree_positions = [
+        (6,0),
+        (5,0),
+        (5,2),
+        (6,2),
+        (7,2),
+        (7,0),
+        (8,2),
+        (8,1),
+        (8,0)
+    ]
+    trees = []
 
-    for rock in rocks:
-        print rock
-
-    sparkle = Sparkle()
-    GAME_BOARD.register(sparkle)
-    GAME_BOARD.set_el(5,2, sparkle)
+    for pos in tree_positions:
+        tree = Tree()
+        GAME_BOARD.register(tree)
+        GAME_BOARD.set_el(pos[0], pos[1], tree)
+        rocks.append(tree)
 
     ham = Food()
     ham.IMAGE = "Ham"
@@ -163,12 +225,7 @@ def initialize():
     lettuce = Food()
     lettuce.IMAGE = "Lettuce"
     GAME_BOARD.register(lettuce)
-    # GAME_BOARD.set_el(3, 1, lettuce)
-
-    cheese = Food()
-    cheese.IMAGE = "Cheese"
-    GAME_BOARD.register(cheese)
-    # GAME_BOARD.set_el(3, 1, cheese)
+    GAME_BOARD.set_el(7, 1, lettuce)
 
     eggy = Food()
     eggy.IMAGE = "LittleEggy"
@@ -177,31 +234,32 @@ def initialize():
 
     poo = Poo()
     GAME_BOARD.register(poo)
-    GAME_BOARD.set_el(2, 3, poo)
+    GAME_BOARD.set_el(2, 1, poo)
 
     global PLAYER
     PLAYER = Character()
     GAME_BOARD.register(PLAYER)
-    GAME_BOARD.set_el(2,2,PLAYER)
+    GAME_BOARD.set_el(1,1,PLAYER)
     print PLAYER
 
     GAME_BOARD.draw_msg("Welcome, princess-face. Press 'i' to see your inventory. Move around with your arrow keys.")
 
     bot1 = Ally()
     GAME_BOARD.register(bot1)
-    GAME_BOARD.set_el(6,5, bot1)
+    GAME_BOARD.set_el(8,3, bot1)
 
     global SAUSAGE_TWINS
     SAUSAGE_TWINS = Adversary()
     SAUSAGE_TWINS.IMAGE = "SausageTwins"
     GAME_BOARD.register(SAUSAGE_TWINS)
-    GAME_BOARD.set_el(1,7, SAUSAGE_TWINS)
+    GAME_BOARD.set_el(5,1, SAUSAGE_TWINS)
 
 def keyboard_handler():
     direction = None
     choice = None
     global DIALOGUE
     global SAUSAGE_TIMER
+    global CHASE
 
     if DIALOGUE:
         if KEYBOARD[key.A]:
@@ -256,8 +314,11 @@ def keyboard_handler():
 
             GAME_BOARD.del_el(PLAYER.x, PLAYER.y)
             GAME_BOARD.set_el(next_x, next_y, PLAYER)
-    SAUSAGE_TIMER += 1
-    if SAUSAGE_TIMER % 7 == 0:
-        SAUSAGE_TWINS.movement()
+    
+    if CHASE == True:
+        mod = 10
+        SAUSAGE_TIMER += 1
+        if SAUSAGE_TIMER % mod == 0:
+            SAUSAGE_TWINS.movement()
 
 

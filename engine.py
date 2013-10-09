@@ -4,7 +4,7 @@ import pyglet
 from pyglet.window import key
 from core import GameElement
 
-SCREEN_X = 1100
+SCREEN_X = 1300
 SCREEN_Y = 1000
 
 game_window = pyglet.window.Window(SCREEN_X, SCREEN_Y)
@@ -45,14 +45,17 @@ def setup_images():
             "Bacon": "bacon_cuties.png",
             "Bread": "bread.png",
             "Cheese": "cheese.png",
-            "BurgerPatty": "Choco Chip.png",
-            "HappyBurger": "Happy Burger.png",
             "Ham": "ham.png",
             "Lettuce": "lettuce.png",
             "LittleEggy": "little_eggy.png",
             "Poo": "poo_smaller.png",
             "SausageTwins": "sausage_twins.png",
-            "Sparkle": "Selector.png"
+            "Sparkle": "Selector.png",
+            "LRoof": "Roof South West.png",
+            "RRoof": "Roof South East.png",
+            "MRoof": "Roof South.png",
+            "Wall": "Wall Block.png",
+            "UglyTree": "Tree Ugly.png"
             }
 
     for k,v in filenames.items():
@@ -81,14 +84,32 @@ class Board(object):
 
         # Make a map with a stoneblock border and filled with grass
         game_map = []
-        inner_width = width-2
-        for i in range(height):
-            if i == 0 or i == height-1:
-                # On the boundaries
-                game_map.append(["Block"] * width)
-            else:
-                row = ["Block"] + (["DirtBlock"] * inner_width) + ["Block"]
-                game_map.append(row)
+        # game_map2 = []
+        # inner_width = width-2
+        # for i in range(height):
+        #     if i == 0 or i == height-1:
+        #         # On the boundaries
+        #         game_map.append(["Block"] * width)
+        #     else:
+        #         row = ["Block"] + (["DirtBlock"] * inner_width) + ["Block"]
+        #         game_map.append(row)
+
+        f = open("mymap.txt")
+        #f.read()
+        for line in f:
+            row = []
+            for item in range(len(line)):
+                if line[item] == 's':
+                    row = row + ["Block"]
+                if line[item] == 'd':
+                    row = row + ["DirtBlock"]
+                if line[item] == '.':
+                    row = row + ["GrassBlock"]
+            game_map.append(row)
+
+                
+
+        f.close()
         
         self.base_board = game_map
         self.content_layer = []
